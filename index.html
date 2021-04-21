@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHA-256 as Avatars</title>
+    <style>
+        svg circle, svg line {
+            stroke-width: 0.02;
+            stroke: white;
+        }
+        svg line {
+            fill: none;
+        }
+        svg path {
+            stroke-width: 0.02;
+            stroke: white;
+        }
+        .container {
+            width: 100vw;
+            position: relative;
+
+            display: flex;
+            flex-flow: column wrap;
+            align-items: center;
+        }
+        .container input {
+            width: 300px;
+            font-size: 30px;
+        }
+        #chart {
+            width: 40vw;
+            margin: auto;
+        }
+        .grid {
+            display: grid;
+            width: 60%;
+            padding-top: 10px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            text-align: center;
+        }
+        .grid div {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart"></div>
+    <div class="container">
+        <h3 id="sha"></h3>
+        <input type="text" id="shaInput" value="Hello, world!">
+        <div class="grid">
+            <div id="normal"></div>
+            <div id="staggered"></div>
+            <div id="circle"></div>
+            <div id="flower"></div>
+        </div>
+    </div>
+    <script type="module">
+        import { SHA256Avatar } from './sha256Avatar.js'
+
+        const chart = document.getElementById('chart');
+        const normal = document.getElementById('normal');
+        const staggered = document.getElementById('staggered');
+        const circle = document.getElementById('circle');
+        const flower = document.getElementById('flower');
+        const sha = document.getElementById('sha');
+        const shaAvatar = new SHA256Avatar();
+        let mainChart = shaAvatar.pathsType.PATHS;
+
+        const text = document.getElementById('shaInput');
+        text.addEventListener('input', async (e) => {
+            clearCharts()
+            await startApp(text.value);
+        })
+        normal.addEventListener('click', async (e) => {
+            clearCharts()
+            mainChart = shaAvatar.pathsType.PATHS;
+            await startApp(text.value);
+        })
+        staggered.addEventListener('click', async (e) => {
+            clearCharts()
+            mainChart = shaAvatar.pathsType.PATHS_STAGGERED;
+            await startApp(text.value);
+        })
+        circle.addEventListener('click', async (e) => {
+            clearCharts()
+            mainChart = shaAvatar.pathsType.PATHS_CIRCLE;
+            await startApp(text.value);
+        })
+        flower.addEventListener('click', async (e) => {
+            clearCharts()
+            mainChart = shaAvatar.pathsType.PATHS_STAGGERED_CIRCLE;
+            await startApp(text.value);
+        })
+
+        function p(text) {
+            return `<h4>${text}</h4>`
+        }
+        function clearCharts() {
+            chart.innerHTML = '';
+            normal.innerHTML = '';
+            staggered.innerHTML = '';
+            circle.innerHTML = '';
+            flower.innerHTML = '';
+        }
+        
+        async function startApp(msg) {
+            await shaAvatar.init(msg)
+            chart.innerHTML = await shaAvatar.getSvgString(mainChart);
+            normal.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS) + p('Normal');
+            staggered.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_STAGGERED) + p('Stagger');
+            circle.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_CIRCLE) + p('Circle');
+            flower.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_STAGGERED_CIRCLE) + p('Flower');
+            sha.innerText = shaAvatar.shaText;
+        }
+
+        startApp(text.value);
+    </script>
+</body>
+</html>
