@@ -17,6 +17,9 @@
             stroke-width: 0.02;
             stroke: white;
         }
+        svg > * {
+            transition: all .8s ease;
+        }
         .container {
             width: 100vw;
             position: relative;
@@ -68,32 +71,28 @@
         const flower = document.getElementById('flower');
         const sha = document.getElementById('sha');
         const shaAvatar = new SHA256Avatar();
-        let mainChart = shaAvatar.pathsType.PATHS;
 
         const text = document.getElementById('shaInput');
         text.addEventListener('input', async (e) => {
             clearCharts()
             await startApp(text.value);
+            await updateApp(text.value);
         })
         normal.addEventListener('click', async (e) => {
-            clearCharts()
-            mainChart = shaAvatar.pathsType.PATHS;
-            await startApp(text.value);
+            shaAvatar.mainChart = shaAvatar.pathsType.PATHS;
+            await updateApp(text.value);
         })
         staggered.addEventListener('click', async (e) => {
-            clearCharts()
-            mainChart = shaAvatar.pathsType.PATHS_STAGGERED;
-            await startApp(text.value);
+            shaAvatar.mainChart = shaAvatar.pathsType.PATHS_STAGGERED;
+            await updateApp(text.value);
         })
         circle.addEventListener('click', async (e) => {
-            clearCharts()
-            mainChart = shaAvatar.pathsType.PATHS_CIRCLE;
-            await startApp(text.value);
+            shaAvatar.mainChart = shaAvatar.pathsType.PATHS_CIRCLE;
+            await updateApp(text.value);
         })
         flower.addEventListener('click', async (e) => {
-            clearCharts()
-            mainChart = shaAvatar.pathsType.PATHS_STAGGERED_CIRCLE;
-            await startApp(text.value);
+            shaAvatar.mainChart = shaAvatar.pathsType.PATHS_STAGGERED_CIRCLE;
+            await updateApp(text.value);
         })
 
         function p(text) {
@@ -109,12 +108,23 @@
         
         async function startApp(msg) {
             await shaAvatar.init(msg)
-            chart.innerHTML = await shaAvatar.getSvgString(mainChart);
+            chart.innerHTML = await shaAvatar.getSvgString(shaAvatar.mainChart, true);
             normal.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS) + p('Normal');
             staggered.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_STAGGERED) + p('Stagger');
             circle.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_CIRCLE) + p('Circle');
             flower.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_STAGGERED_CIRCLE) + p('Flower');
             sha.innerText = shaAvatar.shaText;
+        }
+
+        async function updateApp(msg) {
+            // await shaAvatar.init(msg);
+            await shaAvatar.updateSvgPaths(shaAvatar.mainChart, true);
+            // chart.innerHTML = await shaAvatar.updateSvgPaths(mainChart, true);
+            // normal.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS) + p('Normal');
+            // staggered.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_STAGGERED) + p('Stagger');
+            // circle.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_CIRCLE) + p('Circle');
+            // flower.innerHTML = await shaAvatar.getSvgString(shaAvatar.pathsType.PATHS_STAGGERED_CIRCLE) + p('Flower');
+            // sha.innerText = shaAvatar.shaText;
         }
 
         startApp(text.value);

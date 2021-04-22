@@ -3,7 +3,7 @@ class svgStringCreator {
     constructor() {
         this.getRadii()
     }
-    async svgString(paths) {
+    async svgString(paths, svgId) {
         const { outerRad, midOuterRad, midInnerRad, innerRad } = this.radii;
     
         const circles = `
@@ -30,7 +30,7 @@ class svgStringCreator {
         `
     
         return `
-            <svg viewBox="-1.2 -1.2 2.4 2.4">
+            <svg id="${svgId}" viewBox="-1.2 -1.2 2.4 2.4">
                 ${paths}
             </svg>
         `
@@ -63,7 +63,16 @@ class svgStringCreator {
     }
 }
 
-
+Object.defineProperty(Array.prototype, 'chunk_inefficient', {
+    value: function(chunkSize) {
+      var array = this;
+      return [].concat.apply([],
+        array.map(function(elem, i) {
+          return i % chunkSize ? [] : [array.slice(i, i + chunkSize)];
+        })
+      );
+    }
+  });
 
 export class SHA256Avatar extends svgStringCreator {
     sha;
@@ -86,6 +95,7 @@ export class SHA256Avatar extends svgStringCreator {
         PATHS_CIRCLE: 'pathsCircle',
         PATHS_STAGGERED_CIRCLE: 'pathsStaggeredCircle',
     }
+    mainChart = this.pathsType.PATHS;
     constructor() {
         super();
     }
@@ -98,14 +108,40 @@ export class SHA256Avatar extends svgStringCreator {
         const { hashSoul, ringSouls } = this.computeSouls(this._sha.match(/.{1,2}/g));
         this.hashSoul = hashSoul;
         this.ringSouls = ringSouls;
+        this.clearPathLists();
         await this.getPaths();
         await this.getPathsStaggered();
         await this.getPathsCircle();
         await this.getPathsStaggeredCircle();
     }
-    async getSvgString(pathType) {
-        return this.svgString(this[pathType])
+    clearPathLists() {
+            this[this.pathsType.PATHS] = [];
+            this[this.pathsType.PATHS_STAGGERED] = [];
+            this[this.pathsType.PATHS_CIRCLE] = [];
+            this[this.pathsType.PATHS_STAGGERED_CIRCLE] = [];
+    }
+    async getSvgString(pathType, isMain) {
+        const svgId = isMain ? 'svg-main' : `svg-${pathType}`
+        return this.svgString(this[pathType], svgId)
     } 
+    updateSvgPaths(pathType, isMain) {
+        const svgId = isMain ? 'svg-main' : `svg-${pathType}`;
+        
+        let svg = document.getElementById(svgId);
+        let chunks = [].slice.call(svg.children).chunk_inefficient(8);
+        chunks.forEach((arr, i) => {
+            let circle = pathType.indexOf('Circle') > -1;
+            let soul = { hashSoul: this.hashSoul, ringSoul: this.ringSouls[i] };
+            let radius = this.radii[Object.keys(this.radii)[i]];
+            let sha = this.sha[Object.keys(this.sha)[i]];
+            arr.forEach((path, index) => {
+                const hex = sha[index];
+                const colorSouls = this.mapValueToColorSouls(hex, soul);
+                const staggered = pathType.indexOf('Staggered') > -1 && (i % 2) === 1;
+                this.updatePath(path, { index, radius }, colorSouls, staggered, circle)
+            })
+        })
+    }
     async getSvgStringStaggered() {
         return this.svgString(this.pathsStaggered)
     } 
@@ -251,41 +287,54 @@ export class SHA256Avatar extends svgStringCreator {
         const radius = this.getDistance(point1, point2) / 2;
         return `A ${radius} ${radius} 0 1 0 ${point1.x} ${point1.y}`;
     }
+    getD(point1, point2, radius = null) {
+        const arc = radius !== null ? this.arcTo(point1, radius) : this.arcToHalfCircle(point1, point2)
+        const d = [
+            this.moveTo({ x: 0, y: 0}),
+            this.lineTo(point2),
+            arc,
+            'Z'
+        ].join(' ');
+        return d;
+    }
+    updatePath(path, { index, radius }, color, staggered = false, circle = false) {
+        let angleA = index / 8;
+        let angleB = (index + 1) / 8;
+        if (staggered) {
+            const lookup = [1,3,5,7,9,11,13,15,1]
+            angleA = (lookup[index] / 16);
+            angleB = (lookup[index + 1]) / 16;
+        }
+        const point1 = this.polarPoint(radius, angleA);
+        const point2 = this.polarPoint(radius, angleB);
+        const d = circle ? this.getD(point1,point2) : this.getD(point1,point2,radius);
+        path.setAttribute('d', d)
+        path.setAttribute('fill', color);
+    }
     section({ index, radius }, color) {
         const angleA = index / 8;
         const angleB = (index + 1) / 8;
-        const path = [
-            this.moveTo({ x: 0, y: 0}),
-            this.lineTo(this.polarPoint(radius, angleB)),
-            this.arcTo(this.polarPoint(radius, angleA), radius),
-            'Z'
-        ].join(' ');
-        return `<path d="${path}" fill="${color}" />`
+        const point1 = this.polarPoint(radius, angleA);
+        const point2 = this.polarPoint(radius, angleB);
+        const d = this.getD(point1,point2,radius);
+        return `<path d="${d}" fill="${color}" />`
     }
     sectionStaggered({ index, radius }, color) {
         const lookup = [1,3,5,7,9,11,13,15,1]
         const angleA = (lookup[index] / 16);
         const angleB = (lookup[index + 1]) / 16;
-        const path = [
-            this.moveTo({ x: 0, y: 0}),
-            this.lineTo(this.polarPoint(radius, angleB)),
-            this.arcTo(this.polarPoint(radius, angleA), radius),
-            'Z'
-        ].join(' ');
-        return `<path d="${path}" fill="${color}" />`
+        const point1 = this.polarPoint(radius, angleA);
+        const point2 = this.polarPoint(radius, angleB);
+        const d = this.getD(point1,point2,radius);
+        return `<path d="${d}" fill="${color}" />`
     }
     sectionCircle({ index, radius }, color) {
         const angleA = index / 8;
         const angleB = (index + 1) / 8;
         const point1 = this.polarPoint(radius, angleA);
         const point2 = this.polarPoint(radius, angleB);
-        const path = [
-            this.moveTo({ x: 0, y: 0}),
-            this.lineTo(this.polarPoint(radius, angleB)),
-            this.arcToHalfCircle(point1, point2),
-            'Z'
-        ].join(' ');
-        return `<path d="${path}" fill="${color}" />`
+        const d = this.getD(point1,point2);
+        return `<path d="${d}" fill="${color}" />`
     }
     sectionStaggeredCircle({ index, radius }, color) {
         const lookup = [1,3,5,7,9,11,13,15,1]
@@ -293,13 +342,8 @@ export class SHA256Avatar extends svgStringCreator {
         const angleB = (lookup[index + 1]) / 16;
         const point1 = this.polarPoint(radius, angleA);
         const point2 = this.polarPoint(radius, angleB);
-        const path = [
-            this.moveTo({ x: 0, y: 0}),
-            this.lineTo(this.polarPoint(radius, angleB)),
-            this.arcToHalfCircle(point1, point2),
-            'Z'
-        ].join(' ');
-        return `<path d="${path}" fill="${color}" />`
+        const d = this.getD(point1,point2);
+        return `<path d="${d}" fill="${color}" />`
     }
 }
 
