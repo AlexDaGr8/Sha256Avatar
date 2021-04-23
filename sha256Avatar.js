@@ -217,6 +217,7 @@ export class SHA256Avatar extends svgStringCreator {
     hex2bin(hex){
         return (parseInt(hex, 16).toString(2)).padStart(8, '0');
     }
+    // 01010100 xor 00110110 = 01101010
     computeSouls(bytes) {
         const ringLength = Math.round(bytes.length / 4)
         const rings = [
@@ -231,6 +232,11 @@ export class SHA256Avatar extends svgStringCreator {
             ringSouls: rings.map(ring => (ring.reduce(xorReducer, 0) / 0xff) * 2 - 1)
         }
     }
+
+    // 00101100 >> 4 = 0010
+    // 00101100 >> 2 = 001011 & 11 = 11
+    // 00101100 & 11 = 00
+    // 00101110 & 11 = 10
 
     mapValueToColor(value,) {
         const byte = parseInt(value, 16);
@@ -317,7 +323,7 @@ export class SHA256Avatar extends svgStringCreator {
         const point1 = this.polarPoint(radius, angleA);
         const point2 = this.polarPoint(radius, angleB);
         const d = this.getD(point1,point2,radius);
-        return `<path d="${d}" fill="${color}" />`
+        return `<path d="${d}" fill="${color}" stroke-linejoin="round"/>`
     }
     sectionStaggered({ index, radius }, color) {
         const lookup = [1,3,5,7,9,11,13,15,1]
@@ -326,7 +332,7 @@ export class SHA256Avatar extends svgStringCreator {
         const point1 = this.polarPoint(radius, angleA);
         const point2 = this.polarPoint(radius, angleB);
         const d = this.getD(point1,point2,radius);
-        return `<path d="${d}" fill="${color}" />`
+        return `<path d="${d}" fill="${color}" stroke-linejoin="round" />`
     }
     sectionCircle({ index, radius }, color) {
         const angleA = index / 8;
@@ -334,7 +340,7 @@ export class SHA256Avatar extends svgStringCreator {
         const point1 = this.polarPoint(radius, angleA);
         const point2 = this.polarPoint(radius, angleB);
         const d = this.getD(point1,point2);
-        return `<path d="${d}" fill="${color}" />`
+        return `<path d="${d}" fill="${color}" stroke-linejoin="round" />`
     }
     sectionStaggeredCircle({ index, radius }, color) {
         const lookup = [1,3,5,7,9,11,13,15,1]
@@ -343,7 +349,7 @@ export class SHA256Avatar extends svgStringCreator {
         const point1 = this.polarPoint(radius, angleA);
         const point2 = this.polarPoint(radius, angleB);
         const d = this.getD(point1,point2);
-        return `<path d="${d}" fill="${color}" />`
+        return `<path d="${d}" fill="${color}" stroke-linejoin="round" />`
     }
 }
 
